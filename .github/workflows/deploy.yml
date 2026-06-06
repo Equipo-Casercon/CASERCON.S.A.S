@@ -17,7 +17,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-          cd "/var/www/CASERCON.S.A.S"
-          git pull origin main
-          docker compose -f docker-compose.prod.yml up --build -d
-          docker image prune -f
+            cd /var/www/CASERCON_S.A.S
+            git pull origin main
+            docker compose -f docker-compose.prod.yml up --build -d
+            docker image prune -f
