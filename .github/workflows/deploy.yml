@@ -1,1 +1,23 @@
-#Aqui se añadira los pasos para automatizar el despliegue de la aplicacion en un servidor remoto utilizando GitHub Actions. Se pueden incluir pasos para construir la aplicacion, ejecutar pruebas, y luego desplegarla en el servidor utilizando SSH o cualquier otro metodo de despliegue que se prefiera.
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/CASERCON_S.A.S
+            git pull origin main
+            docker compose -f docker-compose.prod.yml up --build -d
+            docker image prune -f
