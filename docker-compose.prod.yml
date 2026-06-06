@@ -10,6 +10,8 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     restart: unless-stopped
+    networks:
+      - casercon_network
 
   backend:
     build:
@@ -22,6 +24,8 @@ services:
     depends_on:
       - db
     restart: unless-stopped
+    networks:
+      - casercon_network
 
   frontend:
     build:
@@ -35,8 +39,14 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - casercon_network
 
 volumes:
   db_data:
+
+networks:
+  casercon_network:
+    driver: bridge
 
 #docker compose -f docker-compose.prod.yml up --build
