@@ -1,0 +1,136 @@
+const materiasPrimasService = require('../services/materiasPrimasService');
+const { validateCreateMateriaPrima, validateUpdateMateriaPrima } = require("../validations/InventarioValidator");
+const materiasPrimasController = {
+
+  // ─── Ya existente: GET /api/materias ──────────────────────────────────────
+async getAllMaterias(req, res) {
+    try {
+    const materiasPrimas = await materiasPrimasService.getAllMaterias();
+    res.status(200).json(materiasPrimas);
+    } catch (error) {
+    console.error("Error en el controlador getAllMaterias:", error);
+    res.status(500).json({ message: "Error al obtener materias primas" });
+    }
+},
+
+  // ─── GET /api/materias/categorias ─────────────────────────────────────────
+async getAllCategorias(req, res) {
+    try {
+    const categorias = await materiasPrimasService.getAllCategorias();
+    res.status(200).json(categorias);
+    } catch (error) {
+    console.error("Error en el controlador getAllCategorias:", error);
+    res.status(500).json({ message: "Error al obtener categorías" });
+    }
+},
+
+  // ─── GET /api/materias/:id/lotes ──────────────────────────────────────────
+async getLotesByMateria(req, res) {
+    try {
+    const lotes = await materiasPrimasService.getLotesByMateria(req.params.id);
+    res.status(200).json(lotes);
+    } catch (error) {
+    console.error("Error en el controlador getLotesByMateria:", error);
+    const status = error.status || 500;
+    res.status(status).json({ message: error.msg || "Error al obtener lotes" });
+    }
+},
+
+  // ─── POST /api/materias ───────────────────────────────────────────────────
+async createMateria(req, res) {
+  const result = validateCreateMateriaPrima(req.body);
+  if (!result.success) {
+    return res.status(400).json({ message: result.error.issues[0].message });
+  }
+  try {
+    const data = await materiasPrimasService.createMateria(req.body);
+    res.status(201).json(data);
+  } catch (error) {
+    console.error("Error en el controlador createMateria:", error);
+    const status = error.status || 500;
+    res.status(status).json({ message: error.msg || "Error al crear materia prima" });
+  }
+},
+
+  // ─── PUT /api/materias/:id ────────────────────────────────────────────────
+async updateMateria(req, res) {
+  const result = validateUpdateMateriaPrima(req.body);
+  if (!result.success) {
+    return res.status(400).json({ message: result.error.issues[0].message });
+  }
+  try {
+    const data = await materiasPrimasService.updateMateria(req.params.id, req.body);
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("Error en el controlador updateMateria:", error);
+    const status = error.status || 500;
+    res.status(status).json({ message: error.msg || "Error al actualizar materia prima" });
+  }
+},
+
+async deleteMateria(req, res) {
+    try {
+      const { observacion } = req.body;
+      const result = await materiasPrimasService.deleteMateria(req.params.id, observacion);
+      res.status(200).json(result);
+    } catch (error) {
+      console.error("Error en el controlador deleteMateria:", error);
+      const status = error.status || 500;
+      res.status(status).json({ message: error.msg || "Error al inhabilitar materia prima" });
+    }
+  },
+
+async habilitarMateria(req, res) {
+try {
+    const result = await materiasPrimasService.habilitarMateria(req.params.id);
+    res.status(200).json(result);
+} catch (error) {
+    console.error("Error en el controlador habilitarMateria:", error);
+    const status = error.status || 500;
+    res.status(status).json({ message: error.msg || "Error al habilitar materia prima" });
+}
+},
+
+async getRecetasActivas(req, res) {
+    try {
+      const data = await materiasPrimasService.getRecetasActivas(req.params.id);
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("Error en getRecetasActivas:", error);
+      res.status(error.status || 500).json({ message: error.msg || "Error" });
+    }
+  },
+
+  async getProduccionesActivas(req, res) {
+    try {
+      const data = await materiasPrimasService.getProduccionesActivas(req.params.id);
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("Error en getProduccionesActivas:", error);
+      res.status(error.status || 500).json({ message: error.msg || "Error" });
+    }
+  },
+
+  async getPedidosPendientes(req, res) {
+    try {
+      const data = await materiasPrimasService.getPedidosPendientes(req.params.id);
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("Error en getPedidosPendientes:", error);
+      res.status(error.status || 500).json({ message: error.msg || "Error" });
+    }
+  },
+
+  async getMovimientos(req, res) {
+    try {
+      const data = await materiasPrimasService.getMovimientos(req.params.id);
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("Error en getMovimientos:", error);
+      res.status(error.status || 500).json({ message: error.msg || "Error" });
+    }
+  },
+  
+};
+
+module.exports = materiasPrimasController;

@@ -1,0 +1,42 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: casercon_db_prod
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-casercon}
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: casercon_backend_prod
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./backend/.env.production
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: casercon_frontend_prod
+    ports:
+      - "80:80"
+    env_file:
+      - ./frontend/.env.production
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db_data:
+
+#docker compose -f docker-compose.prod.yml up --build
