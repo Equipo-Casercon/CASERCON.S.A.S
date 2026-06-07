@@ -36,7 +36,8 @@ const LIMITES = {
 };
 
 // Cantidad de materias por página
-const INVENTARIO_POR_PAGINA = 30;
+const INVENTARIO_POR_PAGINA_DESKTOP = 30;
+const INVENTARIO_POR_PAGINA_MOVIL   = 10;
 
 // Divide un nombre en 2 líneas de máximo 16 caracteres cada una,
 // llenando cada línea con tantas palabras completas como quepan.
@@ -339,6 +340,7 @@ export default function Inventario() {
   const [inhabObs, setInhabObs] = useState("");
   const [inhabObsError, setInhabObsError] = useState("");
   const [inhabConfirmando, setInhabConfirmando] = useState(false);
+  const [esCelular, setEsCelular] = useState(() => window.innerWidth < 768);
 
   // Modal habilitación
   const [modalHab, setModalHab] = useState(false);
@@ -479,14 +481,11 @@ export default function Inventario() {
   }, [busqueda, filtroStock, filtroEstado, catsFiltro]);
 
   // Cálculo de paginación
-  const totalPaginas = Math.max(
-    1,
-    Math.ceil(materiasFiltradas.length / INVENTARIO_POR_PAGINA),
-  );
+  const totalPaginas = Math.max(1, Math.ceil(materiasFiltradas.length / porPagina));
   const materiasVisibles = useMemo(() => {
     const inicio = (paginaActual - 1) * INVENTARIO_POR_PAGINA;
-    return materiasFiltradas.slice(inicio, inicio + INVENTARIO_POR_PAGINA);
-  }, [materiasFiltradas, paginaActual]);
+    return materiasFiltradas.slice(inicio, inicio + porPagina);
+  }, [materiasFiltradas, paginaActual, porPagina]);
 
   // Si la página actual queda fuera de rango tras filtrar, corregir
   useEffect(() => {
@@ -632,6 +631,13 @@ export default function Inventario() {
   };
 
   // ─── Inhabilitar / Habilitar ──────────────────────────────────────────────
+  useEffect(() => {
+  const handler = () => setEsCelular(window.innerWidth < 768);
+  window.addEventListener("resize", handler);
+  return () => window.removeEventListener("resize", handler);
+}, []);
+
+const porPagina = esCelular ? INVENTARIO_POR_PAGINA_MOVIL : INVENTARIO_POR_PAGINA_DESKTOP;
   // ── Flujo inhabilitación ──────────────────────────────────────────────
   const abrirModalInhabilitacion = async (materia) => {
     setInhabData({
@@ -1224,7 +1230,7 @@ export default function Inventario() {
                         <Edit className="w-3.5 h-3.5" /> Editar
                       </button>
                       <button
-                        onClick={() => solicitarAccion(m, "inhabilitar")}
+                        onClick={() => abrirModalInhabilitacion(m)}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-medium"
                       >
                         <Ban className="w-3.5 h-3.5" /> Inhabilitar
