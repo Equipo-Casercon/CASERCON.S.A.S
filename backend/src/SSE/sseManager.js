@@ -1,7 +1,7 @@
 const clients = new Map(); // clientId → res
 
 const addClient = (clientId, res) => {
-  clients.set(clientId, res);
+    clients.set(clientId, res);
 };
 
 const removeClient = (clientId) => {
