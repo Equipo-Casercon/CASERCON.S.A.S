@@ -18,7 +18,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e  # si cualquier comando falla, detiene el script
-            cd /var/www/CASERCON_S.A.S
+            cd /var/www/CASERCON.S.A.S
             git pull origin main
             docker compose -f docker-compose.prod.yml down
             docker image prune -f
