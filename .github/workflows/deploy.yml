@@ -7,17 +7,24 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Deploy
-        run: |
-          set -e
-          cd /var/www/CASERCON.S.A.S
-          git fetch origin main
-          git reset --hard origin/main
-          docker compose -f docker-compose.prod.yml down
-          docker image prune -f
-          docker compose -f docker-compose.prod.yml build --no-cache
-          docker compose -f docker-compose.prod.yml up -d
-          echo "✅ Deploy exitoso"
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          timeout: 120s
+          command_timeout: 30m
+          script: |
+            set -e
+            cd /var/www/CASERCON.S.A.S
+            git fetch origin main
+            git reset --hard origin/main
+            docker compose -f docker-compose.prod.yml down
+            docker image prune -f
+            docker compose -f docker-compose.prod.yml build --no-cache
+            docker compose -f docker-compose.prod.yml up -d
+            echo "✅ Deploy exitoso"
