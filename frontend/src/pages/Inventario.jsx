@@ -602,16 +602,24 @@ export default function Inventario() {
         : `${API_URL}/materias-primas`;
       const method = editando ? "PUT" : "POST";
 
+      // Construir body SIN stock_inicial inicialmente
+      const { stock_inicial, ...bodyData } = {
+        ...formularioLimpio,
+        stock_min: parseFloat(formularioLimpio.stock_min) || 0,
+        id_categoria_materia: parseInt(formularioLimpio.id_categoria_materia),
+        id_usuario: user.id_usuario,
+      };
+
+      // Solo enviar stock_inicial cuando sea creación
+      // o cuando el lote inicial no haya sido usado
+      if (!editando || !loteInicialUsado) {
+        bodyData.stock_inicial =
+          parseFloat(formularioLimpio.stock_inicial) || 0;
+      }
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formularioLimpio,
-          stock_min: parseFloat(formularioLimpio.stock_min) || 0,
-          stock_inicial: parseFloat(formularioLimpio.stock_inicial) || 0,
-          id_categoria_materia: parseInt(formularioLimpio.id_categoria_materia),
-          id_usuario: user.id_usuario,
-        }),
+        body: JSON.stringify(bodyData),
       });
 
       const data = await res.json();
@@ -631,7 +639,6 @@ export default function Inventario() {
     }
   };
 
-  // ─── Inhabilitar / Habilitar ──────────────────────────────────────────────
   // ── Flujo inhabilitación ──────────────────────────────────────────────
   const abrirModalInhabilitacion = async (materia) => {
     setInhabData({

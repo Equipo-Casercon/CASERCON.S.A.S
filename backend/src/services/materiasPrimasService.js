@@ -5,13 +5,12 @@ const materiasPrimasModel = require("../models/materiasPrimasModel");
 // Bajo      : stockActual <= stock_min * 2
 // Suficiente: stockActual >  stock_min * 2
 const calcularEstadoStock = (stockActual, stockMinimo) => {
-  if (stockActual <= stockMinimo)      return "Critico";
-  if (stockActual <= stockMinimo * 2)  return "Bajo";
+  if (stockActual <= stockMinimo) return "Critico";
+  if (stockActual <= stockMinimo * 2) return "Bajo";
   return "Suficiente";
 };
 
 const materiasPrimasService = {
-
   // ─── Usada en Dashboard e Inventario ──────────────────────────────────────
   async getAllMaterias() {
     try {
@@ -23,7 +22,7 @@ const materiasPrimasService = {
         ...m,
         estadoStock: calcularEstadoStock(
           parseFloat(m.stockActual),
-          parseFloat(m.stockMinimo)
+          parseFloat(m.stockMinimo),
         ),
       }));
     } catch (error) {
@@ -88,14 +87,14 @@ const materiasPrimasService = {
       const [mpResult] = await conn.execute(
         `INSERT INTO materias_primas (nombre, codigo, abreviacion, id_categoria_materia, stock_min)
         VALUES (?, ?, ?, ?, ?)`,
-        [nombre, codigo, abreviacion, id_categoria_materia, stock_min ?? 0]
+        [nombre, codigo, abreviacion, id_categoria_materia, stock_min ?? 0],
       );
       const id_materia = mpResult.insertId;
 
       // 2. Generar código de lote
       const fecha = new Date();
-      const dd   = String(fecha.getDate()).padStart(2, "0");
-      const mm   = String(fecha.getMonth() + 1).padStart(2, "0");
+      const dd = String(fecha.getDate()).padStart(2, "0");
+      const mm = String(fecha.getMonth() + 1).padStart(2, "0");
       const yyyy = fecha.getFullYear();
       const codigo_lote = `${abreviacion}-001-${dd}${mm}${yyyy}`;
 
@@ -104,7 +103,7 @@ const materiasPrimasService = {
         `INSERT INTO lotes
           (id_materia, numero_lote, id_detalle_pedido, codigo_lote, stock_inicial, stock_restante, estado)
         VALUES (?, 1, NULL, ?, ?, ?, 'activo')`,
-        [id_materia, codigo_lote, stock_inicial, stock_inicial]
+        [id_materia, codigo_lote, stock_inicial, stock_inicial],
       );
       const id_lote = loteResult.insertId;
 
@@ -113,11 +112,14 @@ const materiasPrimasService = {
         `INSERT INTO movimientos_inventario
           (id_materia, id_lote, id_usuario, tipo_movimiento, cantidad, observacion)
         VALUES (?, ?, ?, 'Entrada', ?, 'Stock inicial al registrar materia prima')`,
-        [id_materia, id_lote, id_usuario, stock_inicial]
+        [id_materia, id_lote, id_usuario, stock_inicial],
       );
 
       await conn.commit();
-      return { id_materia, msg: "Materia prima creada correctamente con stock inicial" };
+      return {
+        id_materia,
+        msg: "Materia prima creada correctamente con stock inicial",
+      };
     } catch (error) {
       await conn.rollback();
       console.error("Error en service createMateria:", error);
@@ -146,25 +148,15 @@ const materiasPrimasService = {
         stock_inicial,
       } = body;
 
-      if (!nombre || !codigo || !abreviacion || !id_categoria_materia) {
-        throw { status: 400, msg: "Faltan campos requeridos" };
-      }
-
-      // Actualizar metadata
-      await materiasPrimasModel.update(id, {
-        nombre,
-        codigo,
-        abreviacion,
-        id_categoria_materia,
-        stock_min,
-      });
-
       // ─── Lógica del stock inicial ─────────────────────────────────────────
       if (stock_inicial !== undefined) {
         const loteInicial = await materiasPrimasModel.findLoteInicial(id);
 
         if (!loteInicial) {
-          throw { status: 400, msg: "No existe lote inicial para esta materia" };
+          throw {
+            status: 400,
+            msg: "No existe lote inicial para esta materia",
+          };
         }
 
         // Si el lote ya fue usado en producción no se puede modificar
@@ -175,10 +167,23 @@ const materiasPrimasService = {
           };
         }
 
+        // Actualizar metadata
+        await materiasPrimasModel.update(id, {
+          nombre,
+          codigo,
+          abreviacion,
+          id_categoria_materia,
+          stock_min,
+        });
+
+        if (!nombre || !codigo || !abreviacion || !id_categoria_materia) {
+          throw { status: 400, msg: "Faltan campos requeridos" };
+        }
+
         // Actualizar ambos campos del lote para mantenerlos sincronizados
         await materiasPrimasModel.updateStockLote(
           loteInicial.id_lote,
-          stock_inicial
+          stock_inicial,
         );
       }
 
@@ -201,9 +206,15 @@ const materiasPrimasService = {
       if (materia.estado === "Inhabilitado")
         throw { status: 400, msg: "La materia prima ya está inhabilitada" };
       if (!observacion || observacion.trim().length < 10)
-        throw { status: 400, msg: "La observación debe tener al menos 10 caracteres" };
+        throw {
+          status: 400,
+          msg: "La observación debe tener al menos 10 caracteres",
+        };
 
-      await materiasPrimasModel.inhabilitarConObservacion(id, observacion.trim());
+      await materiasPrimasModel.inhabilitarConObservacion(
+        id,
+        observacion.trim(),
+      );
       return { msg: "Materia prima inhabilitada correctamente" };
     } catch (error) {
       console.error("Error en service deleteMateria:", error);
