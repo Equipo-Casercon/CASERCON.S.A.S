@@ -1,6 +1,7 @@
 const producccionService = require("../services/produccionService");
 const AppError = require("../errors/AppError");
 const httpStatus = require("../constants/httpStatus");
+const { broadcast } = require("../sse/sseManager");
 
 const produccionController = {
   async getAllProducciones(req, res, next) {
@@ -37,10 +38,12 @@ const produccionController = {
         ...req.body,
         id_usuario_creador: userId,
       });
+
+      broadcast("nueva-orden", produccionNueva); // ya es objeto directo, sin Array.isArray
+
       res.status(httpStatus.OK).json({
         status: "Success",
-        result: produccionNueva.length,
-        data: produccionNueva,
+        data: produccionNueva, // ← quitamos result: produccionNueva.length que causaba el 500
       });
     } catch (error) {
       next(error);
@@ -51,6 +54,12 @@ const produccionController = {
     try {
       const userId = req.user.id;
       await producccionService.iniciarProduccion(req.params.id, userId);
+
+      broadcast("orden-iniciada", {
+        id_orden_produccion: Number(req.params.id),
+        userId,
+      });
+
       res.status(httpStatus.OK).json({
         status: "success",
         message: "Produccion Iniciada",
@@ -63,9 +72,8 @@ const produccionController = {
   async finalizarProduccion(req, res, next) {
     try {
       const userId = req.user.id;
-      const rolNombre = req.user.rol_nombre; // viene del middleware protect
+      const rolNombre = req.user.rol_nombre;
 
-      // Verificar que el operario sea el asignado a esta orden
       const orden = await producccionService.getByIdProduccion(req.params.id);
       if (
         rolNombre !== "administrador" &&
@@ -78,6 +86,11 @@ const produccionController = {
       }
 
       await producccionService.finalizarProduccion(req.params.id, userId);
+
+      broadcast("orden-finalizada", {
+        id_orden_produccion: Number(req.params.id),
+      }); // ✅ solo si todo salió bien
+
       res.status(httpStatus.OK).json({
         status: "success",
         message: "Produccion Finalizada",
@@ -90,6 +103,10 @@ const produccionController = {
   async deleteProduccion(req, res, next) {
     try {
       const result = await producccionService.deleteProduccion(req.params.id);
+
+      broadcast("orden-eliminada", {
+        id_orden_produccion: Number(req.params.id),
+      });
 
       res.status(httpStatus.OK).json({
         status: "success",
@@ -235,7 +252,8 @@ const produccionController = {
         throw new AppError(
           "El motivo de modificación es obligatorio",
           httpStatus.BAD_REQUEST,
-        );      }
+        );
+      }
 
       const result = await producccionService.editarRecetaOrden(
         req.params.id,

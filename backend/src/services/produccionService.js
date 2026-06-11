@@ -85,8 +85,9 @@ const producccionService = {
         );
       }
 
-      const produccionNueva = await produccionModel.create(data);
-      return produccionNueva;
+      const idNueva = await produccionModel.create(data);
+      const ordenCompleta = await produccionModel.findById(idNueva);
+      return ordenCompleta;
     } catch (error) {
       console.error("Error en produccionService al crear");
       throw error;

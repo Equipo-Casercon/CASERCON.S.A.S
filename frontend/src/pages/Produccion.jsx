@@ -138,6 +138,7 @@ export default function ProduccionPage() {
   const [stockEdicion, setStockEdicion] = useState({});
 
   const [modalReasignar, setModalReasignar] = useState(false);
+  const [nuevasIds, setNuevasIds] = useState(new Set());
   const [ordenReasignando, setOrdenReasignando] = useState(null);
   const [nuevoOperarioId, setNuevoOperarioId] = useState("");
 
@@ -955,6 +956,85 @@ export default function ProduccionPage() {
     if (paginaActual > totalPaginas) setPaginaActual(totalPaginas);
   }, [totalPaginas, paginaActual]);
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    let es;
+    let reconectando;
+
+    const conectar = () => {
+      es = new EventSource(`${API_URL}/produccion/eventos?token=${token}`);
+
+      // Admin crea orden → operario la ve aparecer
+      es.addEventListener("nueva-orden", (e) => {
+        const nueva = JSON.parse(e.data);
+        setProducciones((prev) => {
+          if (
+            prev.some(
+              (p) => p.id_orden_produccion === nueva.id_orden_produccion,
+            )
+          )
+            return prev;
+          return [nueva, ...prev];
+        });
+        // Animación de entrada por 3 segundos
+        setNuevasIds((prev) => new Set([...prev, nueva.id_orden_produccion]));
+        setTimeout(() => {
+          setNuevasIds((prev) => {
+            const next = new Set(prev);
+            next.delete(nueva.id_orden_produccion);
+            return next;
+          });
+        }, 3000);
+      });
+
+      // Operario inicia → actualiza estado a "En proceso" para todos
+      es.addEventListener("orden-iniciada", (e) => {
+        const { id_orden_produccion } = JSON.parse(e.data);
+        setProducciones((prev) =>
+          prev.map((p) =>
+            p.id_orden_produccion === id_orden_produccion
+              ? { ...p, estado: "En proceso" }
+              : p,
+          ),
+        );
+      });
+
+      // Orden completada → actualiza estado a "Completada" para todos
+      es.addEventListener("orden-finalizada", (e) => {
+        const { id_orden_produccion } = JSON.parse(e.data);
+        setProducciones((prev) =>
+          prev.map((p) =>
+            p.id_orden_produccion === id_orden_produccion
+              ? { ...p, estado: "Completada" }
+              : p,
+          ),
+        );
+      });
+
+      // Orden eliminada → desaparece del listado para todos
+      es.addEventListener("orden-eliminada", (e) => {
+        const { id_orden_produccion } = JSON.parse(e.data);
+        setProducciones((prev) =>
+          prev.filter((p) => p.id_orden_produccion !== id_orden_produccion),
+        );
+      });
+
+      es.onerror = () => {
+        es.close();
+        reconectando = setTimeout(conectar, 4000);
+      };
+    };
+
+    conectar();
+
+    return () => {
+      es?.close();
+      clearTimeout(reconectando);
+    };
+  }, []);
+
   const calcularMateriales = (ingredientes, cantidad) => {
     if (!ingredientes || !cantidad || isNaN(Number(cantidad))) return [];
     return ingredientes.map((ing) => ({
@@ -1317,7 +1397,9 @@ export default function ProduccionPage() {
                 className={`bg-white rounded-lg border-2 shadow-sm p-4 sm:p-6 transition-all ${
                   highlightedId === p.id_orden_produccion
                     ? "border-yellow-400 ring-4 ring-yellow-200 shadow-lg"
-                    : "border-gray-200"
+                    : nuevasIds.has(p.id_orden_produccion)
+                      ? "border-green-400 ring-4 ring-green-100 shadow-lg animate-nueva-orden"
+                      : "border-gray-200"
                 }`}
               >
                 {/* Cabecera de la orden */}

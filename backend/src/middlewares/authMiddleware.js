@@ -6,15 +6,8 @@ const httpStatus = require("../constants/httpStatus");
 
 const protect = async (req, res, next) => {
   try {
-    let token;
-
-    // 1. Obtener token del header
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
-    }
+    // 1. Obtener token del header O query param (para SSE con EventSource)
+    const token = req.headers.authorization?.split(" ")[1] || req.query.token;
 
     console.log("TOKEN RECIBIDO:", token);
 
@@ -22,11 +15,10 @@ const protect = async (req, res, next) => {
       throw new AppError("No has iniciado sesión", httpStatus.UNAUTHORIZED);
     }
 
+    // ... resto igual
+
     // 2. Verificar token
-    const decoded = await promisify(jwt.verify)(
-      token,
-      process.env.JWT_SECRET
-    );
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
     console.log("DECODED TOKEN:", decoded);
 
@@ -72,23 +64,18 @@ const restricTo = (...roles) => {
 
     if (!req.user) {
       return next(
-        new AppError(
-          "Debes estar autenticado",
-          httpStatus.UNAUTHORIZED
-        )
+        new AppError("Debes estar autenticado", httpStatus.UNAUTHORIZED),
       );
     }
 
-    const rolesPermitidos = roles.map((r) =>
-      r.toLowerCase().trim()
-    );
+    const rolesPermitidos = roles.map((r) => r.toLowerCase().trim());
 
     if (!rolesPermitidos.includes(req.user.rol_nombre)) {
       return next(
         new AppError(
           "No tienes permiso para realizar esta acción",
-          httpStatus.FORBIDEN
-        )
+          httpStatus.FORBIDEN,
+        ),
       );
     }
 
