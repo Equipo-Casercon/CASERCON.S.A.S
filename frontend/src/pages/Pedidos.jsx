@@ -103,6 +103,7 @@ export default function PedidosPage() {
   const [pedidoActivo, setPedidoActivo] = useState(null);
   const [errores, setErrores] = useState({});
   const [itemsDevolucion, setItemsDevolucion] = useState([]);
+  const [nuevosIds, setNuevosIds] = useState(new Set());
 
   const formularioVacio = {
     id_proveedor: "",
@@ -192,6 +193,67 @@ export default function PedidosPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightId, pedidos]);
+
+  
+      // ── SSE tiempo real ──────────────────────────────────────────────
+      useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        let es;
+        let reconectando;
+
+        const conectar = () => {
+          es = new EventSource(`${API_URL}/pedidos/eventos?token=${token}`);
+
+          // Admin crea pedido → todos lo ven aparecer con animación
+          es.addEventListener("nuevo-pedido", (e) => {
+            const nuevo = JSON.parse(e.data);
+            setPedidos((prev) => {
+              if (prev.some((p) => p.id_pedido === nuevo.id_pedido))
+                return prev;
+              return [nuevo, ...prev];
+            });
+            setNuevosIds((prev) => new Set([...prev, nuevo.id_pedido]));
+            setTimeout(() => {
+              setNuevosIds((prev) => {
+                const next = new Set(prev);
+                next.delete(nuevo.id_pedido);
+                return next;
+              });
+            }, 3000);
+          });
+
+          // Pedido editado → recarga lista para reflejar cambios
+          es.addEventListener("pedido-actualizado", (e) => {
+            const { id_pedido } = JSON.parse(e.data);
+            fetchPedidos();
+          });
+
+          // Pedido recibido → actualiza estado a recibido para todos
+          es.addEventListener("pedido-recibido", (e) => {
+            const { id_pedido } = JSON.parse(e.data);
+            fetchPedidos(); // recarga porque cambia el estado + se generan devoluciones
+          });
+
+          // Pedido eliminado → desaparece para todos
+          es.addEventListener("pedido-eliminado", (e) => {
+            const { id_pedido } = JSON.parse(e.data);
+            setPedidos((prev) => prev.filter((p) => p.id_pedido !== id_pedido));
+          });
+
+          es.onerror = () => {
+            es.close();
+            reconectando = setTimeout(conectar, 4000);
+          };
+        };
+
+        conectar();
+        return () => {
+          es?.close();
+          clearTimeout(reconectando);
+        };
+      }, []);
 
   // ── Estadísticas ─────────────────────────────────────────────────
   const stats = useMemo(
@@ -899,9 +961,11 @@ export default function PedidosPage() {
                 className={`bg-white rounded-lg border-2 shadow-sm p-4 sm:p-6 transition-all ${
                   isHighlighted
                     ? "border-yellow-400 ring-4 ring-yellow-200 shadow-lg"
-                    : esDevolucion
-                      ? "border-purple-200 bg-purple-50"
-                      : "border-gray-200"
+                    : nuevosIds.has(pedido.id_pedido)
+                      ? "border-green-400 ring-4 ring-green-100 shadow-lg animate-nueva-orden"
+                      : esDevolucion
+                        ? "border-purple-200 bg-purple-50"
+                        : "border-gray-200"
                 }`}
               >
                 {/* Cabecera */}

@@ -1,5 +1,6 @@
 const PedidosService = require("../services/pedidosService");
 const httpStatus = require("../constants/httpStatus");
+const { broadcast } = require('../sse/sseManager');
 
 const PedidosController = {
 
@@ -27,6 +28,10 @@ const PedidosController = {
         ...req.body,
         id_usuario_creador: req.user.id,
       });
+
+      const pedidoCompleto = await PedidosService.getPedidoById(result.id_pedido);
+      broadcast('nuevo-pedido', pedidoCompleto);
+
       res.status(httpStatus.OK).json({ status: "success", data: result });
     } catch (error) { next(error); }
   },
@@ -34,6 +39,9 @@ const PedidosController = {
   async updatePedido(req, res, next) {
     try {
       const result = await PedidosService.updatePedido(req.params.id, req.body);
+
+      broadcast('pedido-actualizado', { id_pedido: Number(req.params.id) });
+
       res.status(httpStatus.OK).json({ status: "success", message: result.message });
     } catch (error) { next(error); }
   },
@@ -41,6 +49,9 @@ const PedidosController = {
   async deletePedido(req, res, next) {
     try {
       const result = await PedidosService.deletePedido(req.params.id);
+
+      broadcast('pedido-eliminado', { id_pedido: Number(req.params.id) });
+
       res.status(httpStatus.OK).json({ status: "success", message: result.message });
     } catch (error) { next(error); }
   },
@@ -53,6 +64,9 @@ const PedidosController = {
         req.user.id,
         itemsDevolucion
       );
+
+      broadcast('pedido-recibido', { id_pedido: Number(req.params.id) });
+      
       res.status(httpStatus.OK).json({ status: "success", message: result.message });
     } catch (error) { next(error); }
   },

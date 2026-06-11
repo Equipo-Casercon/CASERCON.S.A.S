@@ -3,7 +3,9 @@ const router  = express.Router();
 const { protect } = require("../middlewares/authMiddleware");
 const checkUserActivo = require("../middlewares/checkUserActivo");
 const PedidosController = require("../controllers/pedidosController");
+const sseController = require('../controllers/sseController');
 
+router.get("/eventos", protect, checkUserActivo, sseController.suscribir);
 router.get("/proveedores", protect, checkUserActivo, PedidosController.getProveedores);
 router.get("/materias",    protect, checkUserActivo, PedidosController.getMateriasPrimas);
 router.get("/",            protect, checkUserActivo, PedidosController.getAllPedidos);
