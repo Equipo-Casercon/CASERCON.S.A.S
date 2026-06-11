@@ -16,6 +16,9 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          timeout: 60s
+          command_timeout: 30m
           script: |
             set -e
             cd /var/www/CASERCON.S.A.S
@@ -25,3 +28,4 @@ jobs:
             docker image prune -f
             docker compose -f docker-compose.prod.yml build --no-cache
             docker compose -f docker-compose.prod.yml up -d
+            echo "✅ Deploy exitoso"
